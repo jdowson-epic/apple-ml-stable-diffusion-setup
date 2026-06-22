@@ -1,0 +1,19 @@
+# Core ML model packages — large binary files, excluded from version control
+# Regenerate with: python -m python_coreml_stable_diffusion.torch2coreml ...
+*.mlpackage/
+*.mlpackage
+*.mlmodel
+*.mlmodelc/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Generated images
+*.png
+*.jpg
+*.jpeg
+
+# macOS
+.DS_Store
