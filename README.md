@@ -14,6 +14,18 @@ converting a Stable Diffusion model to Core ML format, and running inference on 
 
 ---
 
+## Automated setup (steps 1–4)
+
+If you'd rather not run the steps manually, `setup.sh` automates them:
+
+```bash
+chmod +x setup.sh && ./setup.sh
+```
+
+Then skip to [step 5](#5-authenticate-with-huggingface). Otherwise, follow the manual steps below.
+
+---
+
 ## 1. Create a Python 3.12 virtual environment
 
 The package's pinned dependencies (numpy < 1.24, transformers == 4.44.2) are incompatible with
@@ -147,44 +159,31 @@ downloaded from HuggingFace on first run and cached in `~/.cache/huggingface/`.
 
 ## 7. Run inference
 
-Save this as `generate.py` and run with `python generate.py`:
+A ready-to-run `generate.py` script is included in this repository:
 
-```python
-import numpy as np
-import torch
-from diffusers import StableDiffusionPipeline
-from python_coreml_stable_diffusion import pipeline as coreml_pipeline
+```bash
+# Default prompt, 20 steps, seed 42
+python generate.py
 
-MODEL_VERSION  = "runwayml/stable-diffusion-v1-5"
-MLPACKAGES_DIR = "/Users/jim/sd-coreml"
-COMPUTE_UNIT   = "ALL"   # CPU + GPU + Neural Engine
-
-# Load PyTorch pipe for tokenizer/scheduler config only (weights unused at inference)
-pytorch_pipe = StableDiffusionPipeline.from_pretrained(
-    MODEL_VERSION,
-    torch_dtype=torch.float16,
-    safety_checker=None,   # safety_checker was not converted to CoreML
-)
-
-# Swap in CoreML models
-# NOTE: First run JIT-compiles the models (~2 min). Subsequent runs are faster.
-coreml_pipe = coreml_pipeline.get_coreml_pipe(
-    pytorch_pipe=pytorch_pipe,
-    mlpackages_dir=MLPACKAGES_DIR,
-    model_version=MODEL_VERSION,
-    compute_unit=COMPUTE_UNIT,
-    delete_original_pipe=True,
-)
-
-# Generate
-np.random.seed(42)
-result = coreml_pipe(
-    prompt="a photo of an astronaut riding a horse on the moon",
-    num_inference_steps=20,
-)
-result.images[0].save("output.png")
-print("Saved output.png")
+# Custom options
+python generate.py \
+  --prompt "a watercolour painting of a fox in the snow" \
+  --steps 30 \
+  --seed 7 \
+  --output fox.png \
+  --compute-unit CPU_AND_NE
 ```
+
+Full usage:
+
+```
+usage: generate.py [-h] [--prompt TEXT] [--steps N] [--seed N] [--output PATH]
+                   [--model HF_ID] [--mldir PATH]
+                   [--compute-unit {ALL,CPU_AND_NE,CPU_AND_GPU,CPU_ONLY}]
+```
+
+> **Note:** The first run JIT-compiles each Core ML model (~2 min total). Compiled
+> models are cached by the OS so subsequent runs start in seconds.
 
 ---
 
@@ -222,8 +221,11 @@ Distilled or heavily modified UNets are not supported by this package.
 
 ```
 ~/sd-venv/          Python 3.12 virtual environment with all dependencies
-~/sd-coreml/        Converted Core ML model packages
+~/sd-coreml/        Converted Core ML model packages + scripts
   ├── README.md     This file
+  ├── setup.sh      One-shot setup script (automates steps 1–4)
+  ├── generate.py   Inference script with CLI flags
+  ├── .gitignore
   ├── Stable_Diffusion_version_runwayml_stable-diffusion-v1-5_text_encoder.mlpackage
   ├── Stable_Diffusion_version_runwayml_stable-diffusion-v1-5_unet.mlpackage
   └── Stable_Diffusion_version_runwayml_stable-diffusion-v1-5_vae_decoder.mlpackage
